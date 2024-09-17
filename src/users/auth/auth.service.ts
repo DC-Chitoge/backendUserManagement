@@ -32,16 +32,9 @@ export class AuthService {
     requestBody.password = hashPassword;
     //* save to db
     const savedUser = await this.userService.createUser(requestBody);
-    // const payload = {
-    //   id: savedUser.id,
-    //   email: savedUser.email,
-    //   // firstName: savedUser.firstName,
-    //   // lastName: savedUser.lastName,
-    //   // role: savedUser.role,
-    // };
+
     const { accessToken, refreshToken } = await this.generateTokens(
       savedUser.id,
-      savedUser.email,
     );
     // Add this line
 
@@ -70,16 +63,9 @@ export class AuthService {
     if (!isMatchPass) {
       throw new BadRequestException('Invalid credential ');
     }
-    // const payload = {
-    //   id: userEmail.id,
-    //   email: userEmail.email,
-    //   // firstName: userEmail.firstName,
-    //   // lastName: userEmail.lastName,
-    //   // role: userEmail.role,
-    // };
+
     const { accessToken, refreshToken } = await this.generateTokens(
       userEmail.id,
-      userEmail.email,
     );
     await this.usersRepository.update(userEmail.id, {
       refreshToken: refreshToken,
@@ -106,14 +92,13 @@ export class AuthService {
       throw new BadRequestException('Logout failed');
     }
   }
-  async generateTokens(userId: number, email: string) {
+  async generateTokens(userId: number) {
     const payload = {
       id: userId,
-      email: email,
     };
     const accessToken = await this.jwtService.signAsync(payload, {
       secret: process.env.JWT_SECRET,
-      expiresIn: '15m',
+      expiresIn: '15p',
     });
     const refreshToken = await this.jwtService.signAsync(payload, {
       secret: process.env.JWT_REFRESH_SECRET,
@@ -130,7 +115,7 @@ export class AuthService {
 
       // Tạo các token mới
       const { accessToken, refreshToken: newRefreshToken } =
-        await this.generateTokens(payload.id, payload.email);
+        await this.generateTokens(payload.id);
 
       // Cập nhật refreshToken và thời gian hết hạn trong cơ sở dữ liệu nếu cần
 

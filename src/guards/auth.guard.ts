@@ -6,7 +6,7 @@ import {
   ForbiddenException,
 } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
-import { UsersService } from './../user.service';
+import { UsersService } from '../users/user.service';
 
 @Injectable()
 export class AuthGuard implements CanActivate {
@@ -30,7 +30,7 @@ export class AuthGuard implements CanActivate {
       });
       // console.log('>>>payload', payload);
       //* 3 find user in db based jwtVerify
-      const user = await this.userService.findByEmail(payload.email);
+      const user = await this.userService.findByUserId(payload.id);
       if (!user) {
         throw new ForbiddenException('user has not token');
       }

@@ -1,7 +1,7 @@
 import { BadRequestException } from '@nestjs/common';
 import { User } from '../entities/user.entity';
 
-export class adminPermission {
+export class AdminPermission {
   static check(currentUser: User) {
     if (currentUser.role.toLowerCase() === 'admin') return;
     else {

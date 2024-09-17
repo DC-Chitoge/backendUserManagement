@@ -1,16 +1,24 @@
-import { Entity, Column, PrimaryGeneratedColumn } from 'typeorm';
+import {
+  Entity,
+  Column,
+  PrimaryGeneratedColumn,
+  ManyToMany,
+  JoinTable,
+} from 'typeorm';
 import { Exclude } from 'class-transformer';
+import { Group } from './../../groups/entities/group.entity';
+import { Permission } from 'src/permissions/entities/permission.entity';
 export enum Role {
   USER = 'USER',
-  MOD = 'MOD',
   ADMIN = 'ADMIN',
+  ROOTADMIN = 'ROOTADMIN',
 }
 @Entity()
 export class User {
   @PrimaryGeneratedColumn()
   id: number;
 
-  @Column()
+  @Column({ unique: true })
   email: string;
   @Column()
   firstName: string;
@@ -36,4 +44,10 @@ export class User {
   refreshToken: string;
   @Column({ nullable: true })
   avatarUrl: string;
+
+  @ManyToMany(() => Group, (group) => group.users)
+  groups: Group[];
+  @ManyToMany(() => Permission, (permission) => permission.users)
+  @JoinTable()
+  permissions: Permission[];
 }
