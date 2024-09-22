@@ -4,11 +4,14 @@ import {
   Controller,
   Delete,
   Get,
+  InternalServerErrorException,
+  NotFoundException,
   Param,
   ParseIntPipe,
   Post,
   Put,
   UploadedFile,
+  UseFilters,
   UseGuards,
   UseInterceptors,
 } from '@nestjs/common';
@@ -24,12 +27,16 @@ import { RoleGuard } from 'src/guards/role.guard';
 import { RefreshTokenDto } from './dtos/refreshTokenDto';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { AdminGuard } from 'src/guards/admin.guard';
+import { HttpExceptionFilter } from 'src/exception-filters/http-exception.filter';
+import { UserCacheService } from './userCache.service';
 
 @Controller('users')
+@UseFilters(HttpExceptionFilter)
 export class UserController {
   constructor(
     private userService: UsersService,
     private authService: AuthService,
+    private userCacheService: UserCacheService,
   ) {}
   @Get()
   @UseInterceptors(ClassSerializerInterceptor) //* don't show password
@@ -45,7 +52,9 @@ export class UserController {
   @Get('current-user')
   @UseGuards(AuthGuard)
   findOne(@CurrentUser() currentUser: User) {
-    return currentUser;
+    const cachedUser = this.userCacheService.getUser(currentUser.id);
+    console.log('>>>check current user', cachedUser);
+    return cachedUser || currentUser;
   }
   @Get(':userId')
   @UseGuards(AuthGuard)
@@ -55,8 +64,7 @@ export class UserController {
 
   @Put(':userId')
   @UseInterceptors(ClassSerializerInterceptor)
-  @UseGuards(new RoleGuard(['admin', 'user', 'rootadmin']))
-  @UseGuards(AuthGuard)
+  @UseGuards(AuthGuard, new RoleGuard(['admin', 'user', 'rootadmin']))
   updateUser(
     @Param('userId', ParseIntPipe) userId: number,
     @Body() requestBody: UpdateUserDto,
@@ -103,26 +111,16 @@ export class UserController {
   async deleteAvatar(@Param('userId') userId: number) {
     return this.userService.deleteAvatar(userId);
   }
-  @Post(':userId/groups/:groupId')
-  async addUserToGroup(
-    @Param('userId') userId: number,
-    @Param('groupId') groupId: number,
-  ) {
-    await this.userService.addUserToGroup(userId, groupId);
-    return { message: 'User added to group successfully' };
-  }
-
   @Get(':userId/permissions')
-  async getUserPermissions(@Param('userId') userId: number) {
-    return this.userService.getUserPermissions(userId);
-  }
-
-  @Put(':userId/permissions')
-  async updateUserPermissions(
-    @Param('userId') userId: number,
-    @Body() permissions: { [key: string]: boolean },
-  ) {
-    await this.userService.updateUserPermissions(userId, permissions);
-    return { message: 'User permissions updated successfully' };
+  async getUserPermissions(@Param('userId', ParseIntPipe) userId: number) {
+    try {
+      const permissions = await this.userService.getUserPermissions(userId);
+      return { permissions };
+    } catch (error) {
+      if (error instanceof NotFoundException) {
+        throw new NotFoundException(error.message);
+      }
+      throw new InternalServerErrorException('Error fetching user permissions');
+    }
   }
 }

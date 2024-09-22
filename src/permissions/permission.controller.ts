@@ -7,13 +7,17 @@ import {
   Patch,
   Delete,
   ParseIntPipe,
+  UseGuards,
 } from '@nestjs/common';
 import { PermissionService } from './permission.service';
 import { Permission } from './entities/permission.entity';
 import { CreatePermissionDto } from './dtos/createPermissionDto';
 import { UpdatePermissionDto } from './dtos/updatePermission';
+import { AuthGuard } from 'src/guards/auth.guard';
+import { RoleGuard } from 'src/guards/role.guard';
 
 @Controller('permissions')
+@UseGuards(AuthGuard, new RoleGuard(['rootadmin']))
 export class PermissionController {
   constructor(private readonly permissionService: PermissionService) {}
   @Post()

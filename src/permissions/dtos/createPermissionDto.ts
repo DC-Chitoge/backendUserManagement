@@ -13,17 +13,17 @@ export class CreatePermissionDto {
   @IsNotEmpty()
   name: string;
 
-  @IsBoolean()
-  @IsNotEmpty()
-  // @Transform(({ value }) =>
-  //   value === 'true' ? true : value === 'false' ? false : value,
-  // )
-  @Transform(({ value }) => {
-    if (value === 'true' || value === true) return true;
-    if (value === 'false' || value === false) return false;
-    return value;
-  })
-  isActive: boolean;
+  // @IsBoolean()
+  // @IsNotEmpty()
+  // // @Transform(({ value }) =>
+  // //   value === 'true' ? true : value === 'false' ? false : value,
+  // // )
+  // @Transform(({ value }) => {
+  //   if (value === 'true' || value === true) return true;
+  //   if (value === 'false' || value === false) return false;
+  //   return value;
+  // })
+  // isActive: boolean;
 
   @IsNumber()
   @IsNotEmpty()

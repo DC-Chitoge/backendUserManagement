@@ -8,8 +8,6 @@ import {
 } from 'typeorm';
 import { Permission } from 'src/permissions/entities/permission.entity';
 import { User } from 'src/users/entities/user.entity';
-import { GroupPermission } from './group-permission.entity';
-
 @Entity()
 export class Group {
   @PrimaryGeneratedColumn()
@@ -21,8 +19,7 @@ export class Group {
   @ManyToMany(() => Permission)
   @JoinTable()
   permissions: Permission[];
+  @JoinTable()
   @ManyToMany(() => User, (user) => user.groups)
   users: User[];
-  @OneToMany(() => GroupPermission, (groupPermission) => groupPermission.group)
-  groupPermissions: GroupPermission[];
 }

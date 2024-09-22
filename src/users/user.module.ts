@@ -9,11 +9,12 @@ import { Group } from 'src/groups/entities/group.entity';
 import { Permission } from 'src/permissions/entities/permission.entity';
 import { GroupModule } from 'src/groups/group.module';
 import { PermissionModule } from 'src/permissions/permission.module';
-import { GroupPermission } from 'src/groups/entities/group-permission.entity';
+import { UserAdminController } from './userAdmin.Controller';
+import { UserCacheService } from './userCache.service';
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([User, Group, Permission, GroupPermission]),
+    TypeOrmModule.forFeature([User, Group, Permission]),
     JwtModule.register({
       global: true,
       signOptions: { expiresIn: '1d' },
@@ -21,9 +22,9 @@ import { GroupPermission } from 'src/groups/entities/group-permission.entity';
     GroupModule,
     PermissionModule,
   ],
-  controllers: [UserController],
-  providers: [UsersService, AuthService],
-  exports: [UsersService, AuthService],
+  controllers: [UserController, UserAdminController],
+  providers: [UsersService, AuthService, UserCacheService],
+  exports: [UsersService, AuthService, UserCacheService],
 })
 //* middleware
 export class UserModule {}

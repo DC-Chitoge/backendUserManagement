@@ -33,7 +33,6 @@ export class User {
     type: 'enum',
     enum: Role,
     default: Role.USER,
-    // Add this line
   })
   @Exclude()
   role: Role;

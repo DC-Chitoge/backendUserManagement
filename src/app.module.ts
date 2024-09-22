@@ -10,11 +10,12 @@ import { Group } from './groups/entities/group.entity';
 import { Permission } from './permissions/entities/permission.entity';
 import { GroupModule } from './groups/group.module';
 import { PermissionModule } from './permissions/permission.module';
-import { GroupPermission } from './groups/entities/group-permission.entity';
 
 @Module({
   imports: [
-    ConfigModule.forRoot(),
+    ConfigModule.forRoot({
+      isGlobal: true,
+    }),
     TypeOrmModule.forRootAsync({
       imports: [ConfigModule],
       useFactory: (configService: ConfigService) => ({
@@ -24,7 +25,7 @@ import { GroupPermission } from './groups/entities/group-permission.entity';
         username: configService.get('DB_USERNAME'),
         password: configService.get('DB_PASSWORD'),
         database: configService.get('DB_DATABASE_NAME'),
-        entities: [User, Group, Permission, GroupPermission],
+        entities: [User, Group, Permission],
         synchronize: true,
       }),
       inject: [ConfigService],

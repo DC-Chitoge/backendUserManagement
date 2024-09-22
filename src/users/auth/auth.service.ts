@@ -12,12 +12,14 @@ import { LoginUserDto } from '../dtos/loginUserDto';
 import { User } from '../entities/user.entity';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
+import { UserCacheService } from '../userCache.service';
 @Injectable()
 export class AuthService {
   constructor(
     @InjectRepository(User)
     private usersRepository: Repository<User>,
     private userService: UsersService,
+    private userCacheService: UserCacheService,
     private jwtService: JwtService,
   ) {}
 
@@ -30,15 +32,11 @@ export class AuthService {
 
     const hashPassword = await bcrypt.hash(requestBody.password, 10);
     requestBody.password = hashPassword;
-    //* save to db
     const savedUser = await this.userService.createUser(requestBody);
 
     const { accessToken, refreshToken } = await this.generateTokens(
       savedUser.id,
     );
-    // Add this line
-
-    // Update the user in the database with the new refresh token
     await this.usersRepository.update(savedUser.id, {
       refreshToken: refreshToken,
       refreshTokenExpires: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // 7 days from now
@@ -67,6 +65,8 @@ export class AuthService {
     const { accessToken, refreshToken } = await this.generateTokens(
       userEmail.id,
     );
+    this.userCacheService.setUser(userEmail.id, userEmail);
+
     await this.usersRepository.update(userEmail.id, {
       refreshToken: refreshToken,
       refreshTokenExpires: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // 7 days from now
@@ -79,12 +79,8 @@ export class AuthService {
   }
   async logoutUser(userId: number) {
     try {
-      // Xóa refreshToken khỏi cơ sở dữ liệu
       await this.removeRefreshToken(userId);
-
-      // Xóa refreshToken khỏi cookies nếu cần
-      // (Front-end cần gửi yêu cầu xóa cookie này)
-
+      this.userCacheService.clearUser(userId);
       return {
         message: 'Logout successfully',
       };
@@ -98,7 +94,7 @@ export class AuthService {
     };
     const accessToken = await this.jwtService.signAsync(payload, {
       secret: process.env.JWT_SECRET,
-      expiresIn: '15p',
+      expiresIn: '1d',
     });
     const refreshToken = await this.jwtService.signAsync(payload, {
       secret: process.env.JWT_REFRESH_SECRET,
