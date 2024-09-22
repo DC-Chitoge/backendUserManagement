@@ -3,6 +3,7 @@ import {
   ClassSerializerInterceptor,
   Controller,
   Delete,
+  ForbiddenException,
   Get,
   InternalServerErrorException,
   NotFoundException,
@@ -111,16 +112,48 @@ export class UserController {
   async deleteAvatar(@Param('userId') userId: number) {
     return this.userService.deleteAvatar(userId);
   }
+  @UseGuards(AuthGuard)
   @Get(':userId/permissions')
-  async getUserPermissions(@Param('userId', ParseIntPipe) userId: number) {
+  async getUserPermissions(
+    @Param('userId', ParseIntPipe) userId: number,
+    @CurrentUser() currentUser: User,
+  ) {
     try {
+      const checkUser = await this.userCacheService.getUser(currentUser.id);
+      if (
+        checkUser.id !== userId &&
+        checkUser.role.toLowerCase() !== 'rootadmin'
+      ) {
+        throw new ForbiddenException(
+          `You do not have permission to view this user's permissions`,
+        );
+      }
       const permissions = await this.userService.getUserPermissions(userId);
       return { permissions };
     } catch (error) {
-      if (error instanceof NotFoundException) {
-        throw new NotFoundException(error.message);
+      throw new NotFoundException(error.message);
+    }
+  }
+  @UseGuards(AuthGuard)
+  @Get(':userId/groups')
+  async getUserGroups(
+    @Param('userId', ParseIntPipe) userId: number,
+    @CurrentUser() currentUser: User,
+  ) {
+    try {
+      const checkUser = await this.userCacheService.getUser(currentUser.id);
+      if (
+        checkUser.id !== userId &&
+        checkUser.role.toLowerCase() !== 'rootadmin'
+      ) {
+        throw new ForbiddenException(
+          `You do not have permission to view this user's groups`,
+        );
       }
-      throw new InternalServerErrorException('Error fetching user permissions');
+      const groups = await this.userService.getUserGroups(userId);
+      return { groups };
+    } catch (error) {
+      throw new NotFoundException(error.message);
     }
   }
 }

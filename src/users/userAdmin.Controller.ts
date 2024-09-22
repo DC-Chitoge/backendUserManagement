@@ -15,6 +15,8 @@ import { RoleGuard } from './../guards/role.guard';
 import { GroupService } from './../groups/group.service';
 import { HttpExceptionFilter } from 'src/exception-filters/http-exception.filter';
 import { UserCacheService } from './userCache.service';
+import { CurrentUser } from './decorators/user.decorator';
+import { User } from './entities/user.entity';
 
 @Controller('rootadmin')
 @UseGuards(AuthGuard, new RoleGuard(['rootadmin']))

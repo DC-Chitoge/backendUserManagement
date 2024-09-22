@@ -66,6 +66,7 @@ export class AuthService {
       userEmail.id,
     );
     this.userCacheService.setUser(userEmail.id, userEmail);
+    console.log('User cached on login:', userEmail); // Kiểm tra thông tin người dùng trong cache
 
     await this.usersRepository.update(userEmail.id, {
       refreshToken: refreshToken,

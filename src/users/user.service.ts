@@ -15,6 +15,7 @@ import { Permission } from 'src/permissions/entities/permission.entity';
 import { Group } from 'src/groups/entities/group.entity';
 import { UserPermissionChecker } from './helper/checkUserPermissionChecker';
 import { UserCacheService } from './userCache.service';
+import { CurrentUser } from './decorators/user.decorator';
 
 @Injectable()
 export class UsersService {
@@ -25,6 +26,7 @@ export class UsersService {
     private permissionRepository: Repository<Permission>,
     @InjectRepository(Group)
     private groupRepository: Repository<Group>,
+    private userCacheService: UserCacheService,
   ) {}
   createUser(requestBody: RegisterUserDto) {
     try {
@@ -155,9 +157,8 @@ export class UsersService {
     }
   }
 
-  async getUserPermissions(userId: number): Promise<string[]> {
+  async getUserPermissions(userId: number) {
     try {
-      // console.log(`Getting permissions for user ID: ${userId}`);
       const userPermissions = await this.usersRepository
         .createQueryBuilder('user')
         .leftJoinAndSelect('user.permissions', 'permission')
