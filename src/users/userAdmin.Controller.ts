@@ -17,10 +17,12 @@ import { HttpExceptionFilter } from 'src/exception-filters/http-exception.filter
 import { UserCacheService } from './userCache.service';
 import { CurrentUser } from './decorators/user.decorator';
 import { User } from './entities/user.entity';
+import { ApiTags } from '@nestjs/swagger';
 
 @Controller('rootadmin')
 @UseGuards(AuthGuard, new RoleGuard(['rootadmin']))
 @UseFilters(HttpExceptionFilter)
+@ApiTags('Rootadmin route')
 
 // @Roles('admin')
 export class UserAdminController {

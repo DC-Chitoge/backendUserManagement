@@ -15,12 +15,17 @@ export class UserPermissionChecker {
     const targetRole = targetUser.role.toLowerCase();
 
     if (action === 'update' && requestBody?.role) {
-      this.checkRoleUpdatePermission(currentRole, requestBody.role);
+      this.checkRoleUpdatePermission(
+        currentRole,
+        requestBody.role,
+        targetUserId,
+        currentUser.id,
+      );
     }
 
     switch (currentRole) {
       case 'rootadmin':
-        return;
+        return; // ROOTADMIN có thể làm bất kỳ điều gì
       case 'admin':
         this.checkAdminPermission(action, targetRole);
         break;
@@ -39,12 +44,24 @@ export class UserPermissionChecker {
   private static checkRoleUpdatePermission(
     currentRole: string,
     newRole: string,
+    targetUserId: number,
+    currentUserId: number,
   ) {
     if (currentRole !== 'rootadmin') {
       throw new ForbiddenException('Only ROOTADMIN can update role');
     }
     if (newRole.toLowerCase() === 'rootadmin') {
       throw new BadRequestException('ROOTADMIN role cannot be assigned');
+    }
+    // Kiểm tra xem người dùng có thể tự cập nhật vai trò của chính họ hay không
+    if (
+      targetUserId === currentUserId &&
+      (newRole.toLowerCase() === 'admin' ||
+        newRole.toLowerCase() === 'rootadmin')
+    ) {
+      throw new ForbiddenException(
+        'You cannot update your role to admin or rootadmin',
+      );
     }
   }
 

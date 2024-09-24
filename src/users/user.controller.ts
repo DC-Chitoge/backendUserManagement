@@ -5,12 +5,15 @@ import {
   Delete,
   ForbiddenException,
   Get,
-  InternalServerErrorException,
+  HttpCode,
+  HttpStatus,
   NotFoundException,
   Param,
   ParseIntPipe,
   Post,
   Put,
+  Res,
+  UnauthorizedException,
   UploadedFile,
   UseFilters,
   UseGuards,
@@ -30,9 +33,10 @@ import { FileInterceptor } from '@nestjs/platform-express';
 import { AdminGuard } from 'src/guards/admin.guard';
 import { HttpExceptionFilter } from 'src/exception-filters/http-exception.filter';
 import { UserCacheService } from './userCache.service';
-
 @Controller('users')
 @UseFilters(HttpExceptionFilter)
+// @ApiBearerAuth()
+// @ApiTags('User route')
 export class UserController {
   constructor(
     private userService: UsersService,
@@ -58,7 +62,7 @@ export class UserController {
     return cachedUser || currentUser;
   }
   @Get(':userId')
-  @UseGuards(AuthGuard)
+  @UseGuards(AuthGuard, new RoleGuard(['admin', 'rootadmin']))
   getUser(@Param('userId', ParseIntPipe) userId: number) {
     return this.userService.findByUserId(userId);
   }
@@ -82,12 +86,14 @@ export class UserController {
   ) {
     return this.userService.deleteByUserId(userId, currentUser);
   }
+
   @Post('/register')
   registerUser(@Body() requestBody: RegisterUserDto) {
     return this.authService.registerUser(requestBody);
   }
+  @HttpCode(200)
   @Post('/login')
-  loginUser(@Body() requestBody: LoginUserDto) {
+  async loginUser(@Body() requestBody: LoginUserDto) {
     return this.authService.loginUser(requestBody);
   }
   @Post('/logout')
@@ -96,21 +102,27 @@ export class UserController {
     return this.authService.logoutUser(currentUser.id);
   }
   @Post('/refresh-token')
+  @UseGuards(AuthGuard)
   refreshToken(@Body() requestBody: RefreshTokenDto) {
     return this.authService.refreshTokens(requestBody.refreshToken);
   }
   @Post('upload-avatar/:userId')
+  @UseGuards(AuthGuard)
   @UseInterceptors(FileInterceptor('avatar'))
   async updateAvatar(
-    @Param('userId') userId: number,
+    @Param('userId', ParseIntPipe) userId: number,
+    @CurrentUser() currentUser: User,
     @UploadedFile() file: Express.Multer.File,
   ) {
-    return this.userService.updateAvatar(userId, file);
+    return this.userService.updateAvatar(userId, currentUser, file);
   }
-
+  @UseGuards(AuthGuard)
   @Delete('delete-avatar/:userId')
-  async deleteAvatar(@Param('userId') userId: number) {
-    return this.userService.deleteAvatar(userId);
+  async deleteAvatar(
+    @Param('userId', ParseIntPipe) userId: number,
+    @CurrentUser() currentUser: User,
+  ) {
+    return this.userService.deleteAvatar(userId, currentUser);
   }
   @UseGuards(AuthGuard)
   @Get(':userId/permissions')

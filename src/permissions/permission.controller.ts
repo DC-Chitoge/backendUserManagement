@@ -15,9 +15,11 @@ import { CreatePermissionDto } from './dtos/createPermissionDto';
 import { UpdatePermissionDto } from './dtos/updatePermission';
 import { AuthGuard } from 'src/guards/auth.guard';
 import { RoleGuard } from 'src/guards/role.guard';
+import { ApiTags } from '@nestjs/swagger';
 
 @Controller('permissions')
 @UseGuards(AuthGuard, new RoleGuard(['rootadmin']))
+@ApiTags('Permissions route')
 export class PermissionController {
   constructor(private readonly permissionService: PermissionService) {}
   @Post()

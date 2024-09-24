@@ -16,8 +16,8 @@ export class Permission {
   @Column({ unique: true })
   name: string;
 
-  @ManyToOne(() => Group, (group) => group.permissions)
-  group: Group;
+  @ManyToMany(() => Group, (group) => group.permissions)
+  group: Group[];
   @ManyToMany(() => User, (user) => user.permissions)
   users: User[];
 }

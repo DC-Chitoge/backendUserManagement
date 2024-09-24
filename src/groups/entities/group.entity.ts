@@ -16,7 +16,7 @@ export class Group {
   @Column({ unique: true })
   name: string;
 
-  @ManyToMany(() => Permission)
+  @ManyToMany(() => Permission, (permission) => permission.group)
   @JoinTable()
   permissions: Permission[];
   @JoinTable()

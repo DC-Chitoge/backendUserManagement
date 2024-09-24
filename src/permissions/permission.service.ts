@@ -73,7 +73,6 @@ export class PermissionService {
         where: { id: id },
         relations: ['users', 'group'],
       });
-
       if (!permissionToDelete) {
         throw new Error('Permission not found');
       }
@@ -87,16 +86,18 @@ export class PermissionService {
           await this.userRepository.save(user);
         }
       }
-
-      // Cập nhật các nhóm đã từng sở hữu quyền này
-      const groups = await this.groupRepository.find({
-        where: { permissions: { id: id } },
-        relations: ['permissions', 'users'],
-      });
+      // const groupId = permissionToDelete.group.id;
+      // // Cập nhật các nhóm đã từng sở hữu quyền này
+      // const groups = await this.groupRepository.find({
+      //   where: { id: groupId },
+      //   relations: ['permissions', 'users'],
+      // });
+      const groups = permissionToDelete.group;
 
       for (const group of groups) {
         // Kiểm tra xem group.permissions có tồn tại và là mảng
         if (Array.isArray(group.permissions)) {
+          // Chỉ xóa quyền có ID tương ứng với quyền cần xóa
           group.permissions = group.permissions.filter(
             (perm) => perm.id !== id,
           );
@@ -108,7 +109,7 @@ export class PermissionService {
       await this.permissionRepository.remove(permissionToDelete);
       return { message: 'Permission deleted successfully' };
     } catch (error) {
-      throw new BadRequestException('Error: ' + error.message);
+      throw new BadRequestException('Error: ' + error.response.message);
     }
   }
 }

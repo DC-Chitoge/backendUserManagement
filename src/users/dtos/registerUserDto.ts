@@ -1,16 +1,16 @@
-import { IsNotEmpty, IsEmail, IsString } from 'class-validator';
+import { IsNotEmpty, IsEmail, MinLength, IsString } from 'class-validator';
 import { Role } from '../entities/user.entity';
-import { PartialType } from '@nestjs/mapped-types';
-
 export class RegisterUserDto {
-  @IsEmail()
+  @IsEmail({}, { message: 'Invalid email format' })
   @IsNotEmpty()
   email: string;
+  @MinLength(6)
   @IsNotEmpty()
-  @IsString()
   password: string;
+  @IsString()
   @IsNotEmpty()
   firstName: string;
+  @IsString()
   @IsNotEmpty()
   lastName: string;
   role: Role;

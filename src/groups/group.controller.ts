@@ -16,9 +16,11 @@ import { CreateGroupDto } from './dtos/createGroupDto';
 import { AuthGuard } from 'src/guards/auth.guard';
 import { RoleGuard } from 'src/guards/role.guard';
 import { HttpExceptionFilter } from 'src/exception-filters/http-exception.filter';
+import { ApiTags } from '@nestjs/swagger';
 @Controller('groups')
 @UseGuards(AuthGuard, new RoleGuard(['rootadmin']))
 @UseFilters(HttpExceptionFilter)
+@ApiTags('Groups route')
 export class GroupController {
   constructor(private readonly groupService: GroupService) {}
 

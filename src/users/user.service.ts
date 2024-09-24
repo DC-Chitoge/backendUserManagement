@@ -71,6 +71,14 @@ export class UsersService {
       if (!user) {
         throw new NotFoundException('User not found');
       }
+      if (
+        userId === currentUser.id &&
+        ['admin', 'rootadmin'].includes(requestBody.role?.toLowerCase())
+      ) {
+        throw new ForbiddenException(
+          'You cannot update your role to admin or rootadmin',
+        );
+      }
       UserPermissionChecker.check('update', currentUser, user, userId);
       const updatedUser = await this.usersRepository.save({
         ...user,
@@ -81,7 +89,8 @@ export class UsersService {
         user: updatedUser,
       };
     } catch (error) {
-      throw new BadRequestException(error.response.message);
+      console.log('check error', error);
+      throw new BadRequestException(error.message);
     }
   }
 
@@ -102,13 +111,21 @@ export class UsersService {
   }
 
   //* avatar
-  async updateAvatar(userId: number, file: Express.Multer.File): Promise<User> {
+  async updateAvatar(
+    userId: number,
+    currentUser: User,
+    file: Express.Multer.File,
+  ): Promise<User> {
     try {
       const user = await this.usersRepository.findOneBy({ id: userId });
       if (!user) {
         throw new NotFoundException('User not found');
       }
-
+      if (userId !== currentUser.id) {
+        throw new ForbiddenException(
+          'You are not authorized to update this avatar',
+        );
+      }
       // Create uploads directory if it doesn't exist
       const uploadsDir = path.join(process.cwd(), 'uploads');
       await fs.mkdir(uploadsDir, { recursive: true });
@@ -138,13 +155,18 @@ export class UsersService {
     }
   }
 
-  async deleteAvatar(userId: number): Promise<User> {
+  async deleteAvatar(userId: number, currentUser: User): Promise<User> {
     try {
+      console.log('check >>>', typeof userId, typeof currentUser.id);
       const user = await this.findByUserId(userId);
       if (!user) {
         throw new NotFoundException('User not found');
       }
-
+      if (userId !== currentUser.id) {
+        throw new ForbiddenException(
+          'You are not authorized to delete this avatar',
+        );
+      }
       if (user.avatarUrl) {
         await fs.unlink(`uploads/${user.avatarUrl}`);
         user.avatarUrl = null;
@@ -153,7 +175,7 @@ export class UsersService {
 
       return user;
     } catch (error) {
-      throw new BadRequestException('Failed to delete avatar');
+      throw new BadRequestException(error.response.message);
     }
   }
 

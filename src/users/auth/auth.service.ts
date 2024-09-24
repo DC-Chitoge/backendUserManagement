@@ -1,6 +1,8 @@
 import {
   BadRequestException,
   Body,
+  ConflictException,
+  ForbiddenException,
   Injectable,
   UnauthorizedException,
 } from '@nestjs/common';
@@ -24,9 +26,18 @@ export class AuthService {
   ) {}
 
   async registerUser(@Body() requestBody: RegisterUserDto) {
+    if (
+      requestBody.role &&
+      (requestBody.role.toLowerCase() === 'admin' ||
+        requestBody.role.toLowerCase() === 'rootadmin')
+    ) {
+      throw new ForbiddenException(
+        'You are not allowed to create an account with admin or rootadmin role ',
+      );
+    }
     const userByEmail = await this.userService.findByEmail(requestBody.email);
     if (userByEmail) {
-      throw new BadRequestException(`email is already exist`);
+      throw new ConflictException(`Email is already exist`);
     }
     //* hass password
 
@@ -51,7 +62,7 @@ export class AuthService {
   async loginUser(@Body() requestBody: LoginUserDto) {
     const userEmail = await this.userService.findByEmail(requestBody.email);
     if (!userEmail) {
-      throw new BadRequestException('Invalid credential ');
+      throw new BadRequestException('Email not found! ');
     }
     //* compare pass
     const isMatchPass = await bcrypt.compare(
@@ -59,7 +70,7 @@ export class AuthService {
       userEmail.password,
     );
     if (!isMatchPass) {
-      throw new BadRequestException('Invalid credential ');
+      throw new UnauthorizedException('Incorrect password');
     }
 
     const { accessToken, refreshToken } = await this.generateTokens(
