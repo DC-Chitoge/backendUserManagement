@@ -1,11 +1,15 @@
-import { BadRequestException, Injectable } from '@nestjs/common';
+import {
+  BadRequestException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { Like, Repository } from 'typeorm';
 import { Permission } from './entities/permission.entity';
 import { UpdatePermissionDto } from './dtos/updatePermission';
 import { CreatePermissionDto } from './dtos/createPermissionDto';
-import { Group } from 'src/groups/entities/group.entity';
-import { User } from 'src/users/entities/user.entity';
+import { Group } from 'src/modules/groups/entities/group.entity';
+import { User } from 'src/modules/users/entities/user.entity';
 
 @Injectable()
 export class PermissionService {
@@ -40,8 +44,10 @@ export class PermissionService {
 
   async findOne(id: number): Promise<Permission> {
     try {
-      const isExist = await this.permissionRepository.findOneBy({ id });
-      if (!isExist) {
+      const existingPermission = await this.permissionRepository.findOneBy({
+        id,
+      });
+      if (!existingPermission) {
         throw new BadRequestException('Permission does not exist');
       }
       return await this.permissionRepository.findOneBy({ id });
@@ -49,12 +55,29 @@ export class PermissionService {
       throw new BadRequestException('Error :' + error.response.message);
     }
   }
+  async findByName(permissionName: string) {
+    try {
+      const permissions = await this.permissionRepository.find({
+        where: { name: Like(`%${permissionName}%`) },
+      });
+
+      if (permissions.length === 0) {
+        throw new NotFoundException(
+          `No groups found with name containing "${permissionName}"`,
+        );
+      }
+
+      return permissions;
+    } catch (error) {
+      throw new BadRequestException(error.message);
+    }
+  }
   async update(id: number, permission: UpdatePermissionDto) {
     try {
-      const isExist = await this.permissionRepository.findOneBy({
+      const existingPermission = await this.permissionRepository.findOneBy({
         id: id,
       });
-      if (!isExist) {
+      if (!existingPermission) {
         throw new BadRequestException('Permission does not exist');
       }
       await this.permissionRepository.update({ id: id }, permission);

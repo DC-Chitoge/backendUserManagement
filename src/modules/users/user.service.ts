@@ -11,11 +11,10 @@ import { UpdateUserDto } from './dtos/updateUserDto';
 import { RegisterUserDto } from './dtos/registerUserDto';
 import * as fs from 'fs/promises';
 import * as path from 'path';
-import { Permission } from 'src/permissions/entities/permission.entity';
-import { Group } from 'src/groups/entities/group.entity';
+import { Permission } from 'src/modules/permissions/entities/permission.entity';
+import { Group } from 'src/modules/groups/entities/group.entity';
 import { UserPermissionChecker } from './helper/checkUserPermissionChecker';
 import { UserCacheService } from './userCache.service';
-import { CurrentUser } from './decorators/user.decorator';
 
 @Injectable()
 export class UsersService {
@@ -79,7 +78,12 @@ export class UsersService {
           'You cannot update your role to admin or rootadmin',
         );
       }
-      UserPermissionChecker.check('update', currentUser, user, userId);
+      UserPermissionChecker.verifyUserActionPermissions(
+        'update',
+        currentUser,
+        user,
+        userId,
+      );
       const updatedUser = await this.usersRepository.save({
         ...user,
         ...requestBody,
@@ -89,7 +93,6 @@ export class UsersService {
         user: updatedUser,
       };
     } catch (error) {
-      console.log('check error', error);
       throw new BadRequestException(error.message);
     }
   }
@@ -101,7 +104,12 @@ export class UsersService {
         throw new NotFoundException('User not found');
       }
 
-      UserPermissionChecker.check('delete', currentUser, userToDelete, userId);
+      UserPermissionChecker.verifyUserActionPermissions(
+        'delete',
+        currentUser,
+        userToDelete,
+        userId,
+      );
 
       await this.usersRepository.delete({ id: userId });
       return { message: 'User deleted successfully' };
@@ -157,7 +165,6 @@ export class UsersService {
 
   async deleteAvatar(userId: number, currentUser: User): Promise<User> {
     try {
-      console.log('check >>>', typeof userId, typeof currentUser.id);
       const user = await this.findByUserId(userId);
       if (!user) {
         throw new NotFoundException('User not found');
@@ -348,11 +355,6 @@ export class UsersService {
 
   async removePermissionFromUser(userId: number, permissionIds: number[]) {
     try {
-      // Log permission IDs if necessary
-      if (permissionIds.length > 0) {
-        console.log('Permission IDs:', permissionIds);
-      }
-
       // Fetch user by userId
       const user = await this.usersRepository.findOne({
         where: { id: userId },
@@ -384,7 +386,6 @@ export class UsersService {
       }
       // Get user's current permissions
       const userPermissions = user.permissions ? user.permissions : [];
-      console.log('test :', userPermissions);
       // Identify permissions that exist in both permissionIds and user's current permissions
       const permissionsToRemove = userPermissions.filter((p) =>
         permissionIds.includes(p.id),
@@ -433,7 +434,6 @@ export class UsersService {
         where: { id: userId },
         relations: ['groups', 'permissions'],
       });
-      console.log('check before user', user);
       if (!Array.isArray(groupIds) || groupIds.length === 0) {
         throw new BadRequestException('groupIds must be a non-empty array');
       }

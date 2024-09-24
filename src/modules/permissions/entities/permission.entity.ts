@@ -5,8 +5,8 @@ import {
   ManyToOne,
   PrimaryGeneratedColumn,
 } from 'typeorm';
-import { Group } from 'src/groups/entities/group.entity';
-import { User } from 'src/users/entities/user.entity';
+import { Group } from 'src/modules/groups/entities/group.entity';
+import { User } from 'src/modules/users/entities/user.entity';
 
 @Entity()
 export class Permission {

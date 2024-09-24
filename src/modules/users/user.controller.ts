@@ -22,16 +22,16 @@ import {
 import { UsersService } from './user.service';
 import { UpdateUserDto } from './dtos/updateUserDto';
 import { RegisterUserDto } from './dtos/registerUserDto';
-import { AuthService } from 'src/users/auth/auth.service';
+import { AuthService } from 'src/modules/users/auth/auth.service';
 import { LoginUserDto } from './dtos/loginUserDto';
-import { AuthGuard } from '../guards/auth.guard';
+import { AuthGuard } from '../../guards/auth.guard';
 import { CurrentUser } from './decorators/user.decorator';
 import { User } from './entities/user.entity';
 import { RoleGuard } from 'src/guards/role.guard';
 import { RefreshTokenDto } from './dtos/refreshTokenDto';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { AdminGuard } from 'src/guards/admin.guard';
-import { HttpExceptionFilter } from 'src/exception-filters/http-exception.filter';
+import { HttpExceptionFilter } from 'src/exceptions/http-exception.filter';
 import { UserCacheService } from './userCache.service';
 @Controller('users')
 @UseFilters(HttpExceptionFilter)
@@ -47,7 +47,6 @@ export class UserController {
   @UseInterceptors(ClassSerializerInterceptor) //* don't show password
   @UseGuards(AuthGuard, AdminGuard)
   async getAllUsers() {
-    console.log('second interceptors');
     const users = await this.userService.findAll();
     return users.map((user) => ({
       ...user,
@@ -58,7 +57,6 @@ export class UserController {
   @UseGuards(AuthGuard)
   findOne(@CurrentUser() currentUser: User) {
     const cachedUser = this.userCacheService.getUser(currentUser.id);
-    console.log('>>>check current user', cachedUser);
     return cachedUser || currentUser;
   }
   @Get(':userId')

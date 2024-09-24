@@ -4,7 +4,7 @@ import { UpdateUserDto } from '../dtos/updateUserDto';
 import { UpdatePermission } from './update.permission';
 
 export class UserPermissionChecker {
-  static check(
+  static verifyUserActionPermissions(
     action: 'update' | 'delete',
     currentUser: User,
     targetUser: User,

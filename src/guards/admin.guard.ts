@@ -13,9 +13,6 @@ export class AdminGuard implements CanActivate {
   ): boolean | Promise<boolean> | Observable<boolean> {
     const request = context.switchToHttp().getRequest();
     const user = request.currentUser;
-    console.log('>>>user', user);
-    console.log('>>>user.role', user.role);
-
     if (!user) {
       throw new UnauthorizedException('User not found in request');
     }

@@ -10,26 +10,20 @@ import {
   Delete,
 } from '@nestjs/common';
 import { UsersService } from './user.service';
-import { AuthGuard } from './../guards/auth.guard';
-import { RoleGuard } from './../guards/role.guard';
-import { GroupService } from './../groups/group.service';
-import { HttpExceptionFilter } from 'src/exception-filters/http-exception.filter';
-import { UserCacheService } from './userCache.service';
-import { CurrentUser } from './decorators/user.decorator';
-import { User } from './entities/user.entity';
-import { ApiTags } from '@nestjs/swagger';
+import { AuthGuard } from '../../guards/auth.guard';
+import { RoleGuard } from '../../guards/role.guard';
+import { GroupService } from '../groups/group.service';
+import { HttpExceptionFilter } from 'src/exceptions/http-exception.filter';
 
 @Controller('rootadmin')
 @UseGuards(AuthGuard, new RoleGuard(['rootadmin']))
 @UseFilters(HttpExceptionFilter)
-@ApiTags('Rootadmin route')
 
 // @Roles('admin')
 export class UserAdminController {
   constructor(
     private readonly usersService: UsersService,
     private readonly groupService: GroupService,
-    private readonly userCacheService: UserCacheService,
   ) {}
 
   // thêm group cho user

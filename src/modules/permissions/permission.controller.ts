@@ -15,11 +15,9 @@ import { CreatePermissionDto } from './dtos/createPermissionDto';
 import { UpdatePermissionDto } from './dtos/updatePermission';
 import { AuthGuard } from 'src/guards/auth.guard';
 import { RoleGuard } from 'src/guards/role.guard';
-import { ApiTags } from '@nestjs/swagger';
 
 @Controller('permissions')
 @UseGuards(AuthGuard, new RoleGuard(['rootadmin']))
-@ApiTags('Permissions route')
 export class PermissionController {
   constructor(private readonly permissionService: PermissionService) {}
   @Post()
@@ -30,7 +28,7 @@ export class PermissionController {
   findAll(): Promise<Permission[]> {
     return this.permissionService.findAll();
   }
-  @Post('managed-permissions')
+  @Post()
   createManagedPermission(@Body() permission: CreatePermissionDto) {
     return this.permissionService.create(permission);
   }
@@ -40,6 +38,10 @@ export class PermissionController {
     @Param('permissionId', ParseIntPipe) permissionId: number,
   ): Promise<Permission> {
     return this.permissionService.findOne(permissionId);
+  }
+  @Post('findByName')
+  findByName(@Body('permissionName') permissionName: string) {
+    return this.permissionService.findByName(permissionName);
   }
   @Patch(':permissionId')
   update(

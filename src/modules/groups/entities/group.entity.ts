@@ -6,8 +6,8 @@ import {
   JoinTable,
   OneToMany,
 } from 'typeorm';
-import { Permission } from 'src/permissions/entities/permission.entity';
-import { User } from 'src/users/entities/user.entity';
+import { Permission } from 'src/modules/permissions/entities/permission.entity';
+import { User } from 'src/modules/users/entities/user.entity';
 @Entity()
 export class Group {
   @PrimaryGeneratedColumn()

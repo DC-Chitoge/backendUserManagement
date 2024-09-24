@@ -6,10 +6,10 @@ import {
 import { CreateGroupDto } from './dtos/createGroupDto';
 import { UpdateGroupDto } from './dtos/updateGroupDto';
 import { InjectRepository } from '@nestjs/typeorm';
-import { User } from 'src/users/entities/user.entity';
-import { Permission } from 'src/permissions/entities/permission.entity';
+import { User } from 'src/modules/users/entities/user.entity';
+import { Permission } from 'src/modules/permissions/entities/permission.entity';
 import { Group } from './entities/group.entity';
-import { In, Repository } from 'typeorm';
+import { In, Like, Repository } from 'typeorm';
 
 @Injectable()
 export class GroupService {
@@ -24,23 +24,30 @@ export class GroupService {
 
   async create(createGroupDto: CreateGroupDto): Promise<Group> {
     try {
-      const isExist = await this.groupRepository.findOneBy({
+      const existingGroup = await this.groupRepository.findOneBy({
         name: createGroupDto.name,
       });
-      if (isExist) {
-        throw new BadRequestException('Group name is exist already');
+      if (existingGroup) {
+        throw new BadRequestException('Group name already exists');
       }
+
       const group = this.groupRepository.create(createGroupDto);
-      if (createGroupDto.permissionIds) {
-        group.permissions = await this.permissionRepository.find({
-          where: { id: In(createGroupDto.permissionIds) },
-        });
-      }
-      if (createGroupDto.userIds) {
-        group.users = await this.userRepository.find({
-          where: { id: In(createGroupDto.userIds) },
-        });
-      }
+
+      const permissions = createGroupDto.permissionIds
+        ? await this.permissionRepository.find({
+            where: { id: In(createGroupDto.permissionIds) },
+          })
+        : [];
+
+      const users = createGroupDto.userIds
+        ? await this.userRepository.find({
+            where: { id: In(createGroupDto.userIds) },
+          })
+        : [];
+
+      group.permissions = permissions;
+      group.users = users;
+
       return await this.groupRepository.save(group);
     } catch (error) {
       throw new BadRequestException('Error : ' + error.response.message);
@@ -94,6 +101,23 @@ export class GroupService {
       return group;
     } catch (error) {
       throw new BadRequestException('Error : ' + error.response.message);
+    }
+  }
+  async findByName(groupName: string) {
+    try {
+      const groups = await this.groupRepository.find({
+        where: { name: Like(`%${groupName}%`) },
+      });
+
+      if (groups.length === 0) {
+        throw new NotFoundException(
+          `No groups found with name containing "${groupName}"`,
+        );
+      }
+
+      return groups;
+    } catch (error) {
+      throw new BadRequestException(error.message);
     }
   }
   async remove(groupId: number) {
@@ -185,7 +209,6 @@ export class GroupService {
           where: { users: { id: user.id } },
           relations: ['permissions'],
         });
-        console.log('>>>check userGroup : ', userGroups);
         // Kiểm tra xem quyền này còn tồn tại trong các nhóm khác không
         const isPermissionInOtherGroups = userGroups.some((ug) =>
           ug.permissions.some((p) => p.id === permissionId),
@@ -194,19 +217,15 @@ export class GroupService {
           where: { id: user.id },
           relations: ['permissions'],
         });
-        console.log('check userPermission >>>', userPermissions.permissions);
-
         // Nếu quyền không còn trong các nhóm khác, loại bỏ quyền đó khỏi người dùng
         if (!isPermissionInOtherGroups) {
           // Ensure user.permissions is defined
           if (!Array.isArray(userPermissions.permissions)) {
             userPermissions.permissions = [];
           }
-          console.log('check after permissions ', userPermissions.permissions);
           const afterPermissions = userPermissions.permissions.filter(
             (p) => p.id !== permissionId,
           );
-          console.log('after', afterPermissions);
           await this.userRepository.save(afterPermissions);
         }
       }

@@ -7,7 +7,7 @@ import {
   UnauthorizedException,
 } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
-import { RegisterUserDto } from 'src/users/dtos/registerUserDto';
+import { RegisterUserDto } from 'src/modules/users/dtos/registerUserDto';
 import * as bcrypt from 'bcrypt';
 import { UsersService } from '../user.service';
 import { LoginUserDto } from '../dtos/loginUserDto';
@@ -77,7 +77,6 @@ export class AuthService {
       userEmail.id,
     );
     this.userCacheService.setUser(userEmail.id, userEmail);
-    console.log('User cached on login:', userEmail); // Kiểm tra thông tin người dùng trong cache
 
     await this.usersRepository.update(userEmail.id, {
       refreshToken: refreshToken,

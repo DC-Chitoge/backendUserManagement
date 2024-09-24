@@ -6,8 +6,8 @@ import {
   JoinTable,
 } from 'typeorm';
 import { Exclude } from 'class-transformer';
-import { Group } from './../../groups/entities/group.entity';
-import { Permission } from 'src/permissions/entities/permission.entity';
+import { Group } from '../../groups/entities/group.entity';
+import { Permission } from 'src/modules/permissions/entities/permission.entity';
 export enum Role {
   USER = 'USER',
   ADMIN = 'ADMIN',

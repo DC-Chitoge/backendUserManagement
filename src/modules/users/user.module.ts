@@ -3,12 +3,12 @@ import { UsersService } from './user.service';
 import { UserController } from './user.controller';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { User } from './entities/user.entity';
-import { AuthService } from 'src/users/auth/auth.service';
+import { AuthService } from 'src/modules/users/auth/auth.service';
 import { JwtModule } from '@nestjs/jwt';
-import { Group } from 'src/groups/entities/group.entity';
-import { Permission } from 'src/permissions/entities/permission.entity';
-import { GroupModule } from 'src/groups/group.module';
-import { PermissionModule } from 'src/permissions/permission.module';
+import { Group } from 'src/modules/groups/entities/group.entity';
+import { Permission } from 'src/modules/permissions/entities/permission.entity';
+import { GroupModule } from 'src/modules/groups/group.module';
+import { PermissionModule } from 'src/modules/permissions/permission.module';
 import { UserAdminController } from './userAdmin.Controller';
 import { UserCacheService } from './userCache.service';
 
