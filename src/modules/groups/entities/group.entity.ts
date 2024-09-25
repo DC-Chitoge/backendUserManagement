@@ -4,7 +4,6 @@ import {
   Column,
   ManyToMany,
   JoinTable,
-  OneToMany,
 } from 'typeorm';
 import { Permission } from 'src/modules/permissions/entities/permission.entity';
 import { User } from 'src/modules/users/entities/user.entity';
@@ -16,7 +15,7 @@ export class Group {
   @Column({ unique: true })
   name: string;
 
-  @ManyToMany(() => Permission, (permission) => permission.group)
+  @ManyToMany(() => Permission, (permission) => permission.groups)
   @JoinTable()
   permissions: Permission[];
   @JoinTable()

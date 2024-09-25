@@ -56,6 +56,10 @@ export class PermissionService {
     }
   }
   async findByName(permissionName: string) {
+    if (!permissionName || permissionName.trim() === '')
+      throw new BadRequestException(
+        'PermissionName parameter must be a non-empty string',
+      );
     try {
       const permissions = await this.permissionRepository.find({
         where: { name: Like(`%${permissionName}%`) },
@@ -66,7 +70,6 @@ export class PermissionService {
           `No groups found with name containing "${permissionName}"`,
         );
       }
-
       return permissions;
     } catch (error) {
       throw new BadRequestException(error.message);
@@ -94,41 +97,25 @@ export class PermissionService {
       // Tìm quyền cần xóa
       const permissionToDelete = await this.permissionRepository.findOne({
         where: { id: id },
-        relations: ['users', 'group'],
+        relations: ['users', 'groups'],
       });
       if (!permissionToDelete) {
         throw new Error('Permission not found');
       }
-
-      // Cập nhật người dùng đã từng sở hữu quyền này
-      const users = permissionToDelete.users;
-      for (const user of users) {
-        // Kiểm tra xem user.permissions có tồn tại và là mảng
-        if (Array.isArray(user.permissions)) {
-          user.permissions = user.permissions.filter((perm) => perm.id !== id);
-          await this.userRepository.save(user);
-        }
-      }
-      // const groupId = permissionToDelete.group.id;
-      // // Cập nhật các nhóm đã từng sở hữu quyền này
-      // const groups = await this.groupRepository.find({
-      //   where: { id: groupId },
-      //   relations: ['permissions', 'users'],
-      // });
-      const groups = permissionToDelete.group;
-
-      for (const group of groups) {
-        // Kiểm tra xem group.permissions có tồn tại và là mảng
-        if (Array.isArray(group.permissions)) {
-          // Chỉ xóa quyền có ID tương ứng với quyền cần xóa
-          group.permissions = group.permissions.filter(
-            (perm) => perm.id !== id,
-          );
-          await this.groupRepository.save(group);
-        }
-      }
-
-      // Cuối cùng, xóa quyền
+      const userIds = permissionToDelete.users.map((user) => user.id);
+      const groupIds = permissionToDelete.groups.map((group) => group.id);
+      if (userIds.length > 0)
+        await this.userRepository
+          .createQueryBuilder()
+          .relation(User, 'permissions')
+          .of(userIds)
+          .remove(permissionToDelete.id);
+      if (groupIds.length > 0)
+        await this.groupRepository
+          .createQueryBuilder()
+          .relation(Group, 'permissions')
+          .of(groupIds)
+          .remove(permissionToDelete.id);
       await this.permissionRepository.remove(permissionToDelete);
       return { message: 'Permission deleted successfully' };
     } catch (error) {

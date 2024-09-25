@@ -6,7 +6,7 @@ import {
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { User } from './entities/user.entity';
-import { Repository, In } from 'typeorm';
+import { Repository, In, Like } from 'typeorm';
 import { UpdateUserDto } from './dtos/updateUserDto';
 import { RegisterUserDto } from './dtos/registerUserDto';
 import * as fs from 'fs/promises';
@@ -14,10 +14,11 @@ import * as path from 'path';
 import { Permission } from 'src/modules/permissions/entities/permission.entity';
 import { Group } from 'src/modules/groups/entities/group.entity';
 import { UserPermissionChecker } from './helper/checkUserPermissionChecker';
-import { UserCacheService } from './userCache.service';
+import { plainToClass } from 'class-transformer';
 
 @Injectable()
 export class UsersService {
+  private userCache: Map<number, User> = new Map();
   constructor(
     @InjectRepository(User)
     private usersRepository: Repository<User>,
@@ -25,8 +26,18 @@ export class UsersService {
     private permissionRepository: Repository<Permission>,
     @InjectRepository(Group)
     private groupRepository: Repository<Group>,
-    private userCacheService: UserCacheService,
   ) {}
+  setUser(userId: number, user: User) {
+    this.userCache.set(userId, user);
+  }
+
+  getUser(userId: number): User | undefined {
+    return this.userCache.get(userId);
+  }
+
+  clearUser(userId: number) {
+    this.userCache.delete(userId);
+  }
   createUser(requestBody: RegisterUserDto) {
     try {
       const user = this.usersRepository.create(requestBody);
@@ -58,6 +69,34 @@ export class UsersService {
       return await this.usersRepository.findOneBy({ email });
     } catch (error) {
       throw new BadRequestException(error.response.message);
+    }
+  }
+  async findByName(name: string) {
+    if (!name || name.trim() === '')
+      throw new BadRequestException(
+        'Name parameter must be a non-empty string',
+      );
+    try {
+      const users = await this.usersRepository.find({
+        where: [
+          { firstName: Like(`%${name}%`) }, // Tìm kiếm trong firstName
+          { lastName: Like(`%${name}%`) }, // Tìm kiếm trong lastName
+        ],
+      });
+
+      if (users.length === 0) {
+        throw new NotFoundException(
+          `No users found with name containing "${name}"`,
+        );
+      }
+
+      // Trả về danh sách người dùng đã tìm thấy
+      return users.map((user) => {
+        const { password, ...result } = user; // Loại bỏ password nếu cần
+        return result; // Trả về chỉ dữ liệu người dùng liên quan
+      });
+    } catch (error) {
+      throw new BadRequestException(error.message);
     }
   }
   async updateByUserId(
@@ -332,13 +371,9 @@ export class UsersService {
       const newPermissions = await this.permissionRepository.find({
         where: { id: In(permissionIds) },
       });
-
-      // Ensure the group is added without removing existing groups
       if (!user.groups.some((g) => g.id === group.id)) {
-        user.groups.push(group); // Ensure existing groups are retained
+        user.groups.push(group);
       }
-
-      // Add new permissions without removing existing ones
       const existingPermissionIds = user.permissions.map((p) => p.id);
       newPermissions.forEach((permission) => {
         if (!existingPermissionIds.includes(permission.id)) {
@@ -355,25 +390,19 @@ export class UsersService {
 
   async removePermissionFromUser(userId: number, permissionIds: number[]) {
     try {
-      // Fetch user by userId
       const user = await this.usersRepository.findOne({
         where: { id: userId },
-        relations: ['permissions'], // Ensure permissions are loaded
+        relations: ['permissions'],
       });
       if (!user) throw new BadRequestException('User does not exist');
 
-      // Validate permissionIds
       if (!Array.isArray(permissionIds) || permissionIds.length === 0) {
         throw new BadRequestException(
           'Permission IDs must be a non-empty array',
         );
       }
-
-      // Fetch all available permissions in the system
       const allPermissions = await this.permissionRepository.find();
       const allPermissionIds = allPermissions.map((p) => p.id);
-
-      // Check if all permissionIds are valid
       const invalidPermissionIds = permissionIds.filter(
         (id) => !allPermissionIds.includes(id),
       );
@@ -384,13 +413,10 @@ export class UsersService {
           )}`,
         );
       }
-      // Get user's current permissions
       const userPermissions = user.permissions ? user.permissions : [];
-      // Identify permissions that exist in both permissionIds and user's current permissions
       const permissionsToRemove = userPermissions.filter((p) =>
         permissionIds.includes(p.id),
       );
-      // Check if there are any permissions to remove
       if (permissionsToRemove.length === 0) {
         throw new BadRequestException(
           `No matching permissions found to remove for permission IDs: ${permissionIds.join(
@@ -398,23 +424,16 @@ export class UsersService {
           )}`,
         );
       }
-
-      // Remove the identified permissions from the user's current permissions
       const updatedPermissions = userPermissions.filter(
         (p) => !permissionIds.includes(p.id),
       );
-
-      // Check if there is any actual change
       if (updatedPermissions.length === userPermissions.length) {
         return {
           message: 'No permissions were removed, no changes made',
         };
       }
-
-      // Update user's permissions and save
       user.permissions = updatedPermissions;
       await this.usersRepository.save(user);
-
       return {
         message: 'Permissions removed from user successfully',
         removedPermissions: permissionsToRemove.map((p) => p.id),
@@ -437,68 +456,44 @@ export class UsersService {
       if (!Array.isArray(groupIds) || groupIds.length === 0) {
         throw new BadRequestException('groupIds must be a non-empty array');
       }
+      // Lấy danh sách các nhóm hợp lệ và kiểm tra sự tồn tại của các groupIds
+      const groupsToRemove = await this.groupRepository
+        .createQueryBuilder('group')
+        .where('group.id IN (:...groupIds)', { groupIds })
+        .getMany();
 
-      const groups = await this.groupRepository.findBy({
-        id: In(groupIds),
-      });
-      // Xác định các nhóm người dùng hiện có
-      const existingGroups = user.groups.map((group) => group.id);
-
-      // Xác định nhóm cần loại bỏ có nhóm nào trong nhóm của người dùng cần xóa nhóm không
-      const groupsToRemove = groupIds.filter((groupId) =>
-        existingGroups.includes(groupId),
-      );
-      // Kiểm tra xem có nhóm nào cần loại bỏ không có trong nhóm của người dùng
-      const invalidGroups = groupIds.filter(
-        (groupId) => !existingGroups.includes(groupId),
-      );
-      if (groups.length !== groupIds.length) {
+      if (groupsToRemove.length !== groupIds.length) {
+        const invalidGroupIds = groupIds.filter(
+          (id) => !groupsToRemove.some((group) => group.id === id),
+        );
         throw new BadRequestException(
-          `Some groupIds are invalid : ${invalidGroups.join(', ')}`,
+          `Some groupIds are invalid: ${invalidGroupIds.join(', ')}`,
         );
       }
 
-      if (invalidGroups.length > 0) {
-        throw new BadRequestException(
-          `Groups with IDs ${invalidGroups.join(
-            ', ',
-          )} do not exist for this user`,
-        );
-      }
-      // Cập nhật danh sách nhóm của người dùng sau khi loại bỏ các nhóm cần thiết
-      user.groups = user.groups.filter(
-        (group) => !groupsToRemove.includes(group.id),
-      );
+      // Loại bỏ nhóm khỏi user
+      await this.usersRepository
+        .createQueryBuilder()
+        .relation(User, 'groups')
+        .of(user.id)
+        .remove(groupsToRemove.map((group) => group.id));
 
-      // Xử lý các quyền sau khi loại bỏ nhóm:
-      // Lấy tất cả các quyền của nhóm bị loại bỏ
-      const removedGroupPermissions = new Set<number>();
-      for (const group of groupsToRemove) {
-        const groupPermissions = await this.getGroupPermissions(group);
-        groupPermissions.forEach((permission) =>
-          removedGroupPermissions.add(permission.id),
-        );
-      }
+      // Lấy danh sách quyền bị loại bỏ từ các nhóm đã xóa
+      const removedGroupPermissions = await this.permissionRepository
+        .createQueryBuilder('permission')
+        .leftJoin('permission.groups', 'group')
+        .where('group.id IN (:...groupIds)', { groupIds })
+        .getMany();
 
-      // Lấy tất cả các quyền từ các nhóm còn lại của người dùng
-      const remainingGroupPermissions = new Set<number>();
-      for (const group of user.groups) {
-        const groupPermissions = await this.getGroupPermissions(group.id);
-        groupPermissions.forEach((permission) =>
-          remainingGroupPermissions.add(permission.id),
-        );
-      }
-
-      // Xóa quyền thuộc các nhóm đã xóa, nhưng chỉ nếu quyền đó không còn thuộc nhóm còn lại
-      user.permissions = user.permissions.filter(
-        (permission) =>
-          !removedGroupPermissions.has(permission.id) ||
-          remainingGroupPermissions.has(permission.id),
-      );
-      await this.usersRepository.save(user);
+      // Xóa quyền khỏi người dùng nếu chúng không còn trong nhóm nào khác
+      await this.usersRepository
+        .createQueryBuilder()
+        .relation(User, 'permissions')
+        .of(user.id)
+        .remove(removedGroupPermissions.map((permission) => permission.id));
       return { message: 'Groups removed from user succesfully' };
     } catch (error) {
-      throw new BadRequestException(error.response.message);
+      throw new BadRequestException(error.message);
     }
   }
 }

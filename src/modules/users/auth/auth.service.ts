@@ -14,14 +14,12 @@ import { LoginUserDto } from '../dtos/loginUserDto';
 import { User } from '../entities/user.entity';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { UserCacheService } from '../userCache.service';
 @Injectable()
 export class AuthService {
   constructor(
     @InjectRepository(User)
     private usersRepository: Repository<User>,
     private userService: UsersService,
-    private userCacheService: UserCacheService,
     private jwtService: JwtService,
   ) {}
 
@@ -76,7 +74,7 @@ export class AuthService {
     const { accessToken, refreshToken } = await this.generateTokens(
       userEmail.id,
     );
-    this.userCacheService.setUser(userEmail.id, userEmail);
+    this.userService.setUser(userEmail.id, userEmail);
 
     await this.usersRepository.update(userEmail.id, {
       refreshToken: refreshToken,
@@ -91,7 +89,7 @@ export class AuthService {
   async logoutUser(userId: number) {
     try {
       await this.removeRefreshToken(userId);
-      this.userCacheService.clearUser(userId);
+      this.userService.clearUser(userId);
       return {
         message: 'Logout successfully',
       };

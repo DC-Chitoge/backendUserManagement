@@ -10,7 +10,6 @@ import { Permission } from 'src/modules/permissions/entities/permission.entity';
 import { GroupModule } from 'src/modules/groups/group.module';
 import { PermissionModule } from 'src/modules/permissions/permission.module';
 import { UserAdminController } from './userAdmin.Controller';
-import { UserCacheService } from './userCache.service';
 
 @Module({
   imports: [
@@ -23,8 +22,8 @@ import { UserCacheService } from './userCache.service';
     PermissionModule,
   ],
   controllers: [UserController, UserAdminController],
-  providers: [UsersService, AuthService, UserCacheService],
-  exports: [UsersService, AuthService, UserCacheService],
+  providers: [UsersService, AuthService],
+  exports: [UsersService, AuthService],
 })
 //* middleware
 export class UserModule {}

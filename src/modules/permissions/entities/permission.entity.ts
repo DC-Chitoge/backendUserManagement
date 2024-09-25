@@ -17,7 +17,7 @@ export class Permission {
   name: string;
 
   @ManyToMany(() => Group, (group) => group.permissions)
-  group: Group[];
+  groups: Group[];
   @ManyToMany(() => User, (user) => user.permissions)
   users: User[];
 }

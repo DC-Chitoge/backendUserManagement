@@ -32,16 +32,12 @@ import { RefreshTokenDto } from './dtos/refreshTokenDto';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { AdminGuard } from 'src/guards/admin.guard';
 import { HttpExceptionFilter } from 'src/exceptions/http-exception.filter';
-import { UserCacheService } from './userCache.service';
 @Controller('users')
 @UseFilters(HttpExceptionFilter)
-// @ApiBearerAuth()
-// @ApiTags('User route')
 export class UserController {
   constructor(
     private userService: UsersService,
     private authService: AuthService,
-    private userCacheService: UserCacheService,
   ) {}
   @Get()
   @UseInterceptors(ClassSerializerInterceptor) //* don't show password
@@ -50,13 +46,13 @@ export class UserController {
     const users = await this.userService.findAll();
     return users.map((user) => ({
       ...user,
-      role: user.role, // Explicitly include the role
+      role: user.role,
     }));
   }
   @Get('current-user')
   @UseGuards(AuthGuard)
   findOne(@CurrentUser() currentUser: User) {
-    const cachedUser = this.userCacheService.getUser(currentUser.id);
+    const cachedUser = this.userService.getUser(currentUser.id);
     return cachedUser || currentUser;
   }
   @Get(':userId')
@@ -99,11 +95,17 @@ export class UserController {
   logoutUser(@CurrentUser() currentUser: User) {
     return this.authService.logoutUser(currentUser.id);
   }
+  @Post('findByName')
+  @UseGuards(AuthGuard, new RoleGuard(['admin', 'rootadmin']))
+  findByName(@Body('name') name: string) {
+    return this.userService.findByName(name);
+  }
   @Post('/refresh-token')
   @UseGuards(AuthGuard)
   refreshToken(@Body() requestBody: RefreshTokenDto) {
     return this.authService.refreshTokens(requestBody.refreshToken);
   }
+
   @Post('upload-avatar/:userId')
   @UseGuards(AuthGuard)
   @UseInterceptors(FileInterceptor('avatar'))
@@ -129,7 +131,7 @@ export class UserController {
     @CurrentUser() currentUser: User,
   ) {
     try {
-      const checkUser = await this.userCacheService.getUser(currentUser.id);
+      const checkUser = await this.userService.getUser(currentUser.id);
       if (
         checkUser.id !== userId &&
         checkUser.role.toLowerCase() !== 'rootadmin'
@@ -151,7 +153,7 @@ export class UserController {
     @CurrentUser() currentUser: User,
   ) {
     try {
-      const checkUser = await this.userCacheService.getUser(currentUser.id);
+      const checkUser = await this.userService.getUser(currentUser.id);
       if (
         checkUser.id !== userId &&
         checkUser.role.toLowerCase() !== 'rootadmin'

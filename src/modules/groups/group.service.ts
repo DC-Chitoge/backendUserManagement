@@ -104,6 +104,10 @@ export class GroupService {
     }
   }
   async findByName(groupName: string) {
+    if (!groupName || groupName.trim() === '')
+      throw new BadRequestException(
+        'GroupName parameter muse be non-empty string',
+      );
     try {
       const groups = await this.groupRepository.find({
         where: { name: Like(`%${groupName}%`) },
@@ -131,34 +135,18 @@ export class GroupService {
       if (!groupToDelete) {
         throw new Error('Group not found');
       }
-      // Cập nhật quyền của người dùng
-      const users = groupToDelete.users;
+      const permissionIds = groupToDelete.permissions.map((p) => p.id);
+      await this.userRepository
+        .createQueryBuilder()
+        .relation(User, 'permissions')
+        .of(groupToDelete.users.map((user) => user.id))
+        .remove(permissionIds);
 
-      for (const user of users) {
-        // Lấy quyền cho người dùng này
-        const userPermissions = await this.permissionRepository.find({
-          where: { users: { id: user.id } },
-        });
-
-        // Lấy quyền từ nhóm cần xóa
-        const permissionsToRemove = groupToDelete.permissions;
-
-        // Loại bỏ quyền nằm trong nhóm cần xóa
-        user.permissions = userPermissions.filter(
-          (permission) =>
-            !permissionsToRemove.some((p) => p.id === permission.id),
-        );
-
-        // Lưu quyền người dùng đã cập nhật
-        await this.userRepository.save(user);
-      }
-
-      // Cập nhật quyền thuộc về nhóm đã xóa
-      for (const permission of groupToDelete.permissions) {
-        // Loại bỏ nhóm đã xóa khỏi nhóm của quyền
-        permission.group = null;
-        await this.permissionRepository.save(permission);
-      }
+      await this.permissionRepository
+        .createQueryBuilder()
+        .relation(Permission, 'groups')
+        .of(permissionIds)
+        .remove(groupToDelete.id);
 
       await this.groupRepository.remove(groupToDelete);
 
@@ -166,7 +154,7 @@ export class GroupService {
         message: 'Group deleted and user permissions updated successfully',
       };
     } catch (error) {
-      throw new BadRequestException('Error: ' + error.response.message);
+      throw new BadRequestException('Error: ' + error.message);
     }
   }
   async removePermissionFromGroup(groupId: number, permissionId: number) {

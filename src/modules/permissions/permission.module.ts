@@ -8,7 +8,6 @@ import { User } from 'src/modules/users/entities/user.entity';
 import { Group } from 'src/modules/groups/entities/group.entity';
 import { AuthService } from 'src/modules/users/auth/auth.service';
 import { UserModule } from 'src/modules/users/user.module';
-import { UserCacheService } from 'src/modules/users/userCache.service';
 
 @Module({
   imports: [
@@ -16,7 +15,7 @@ import { UserCacheService } from 'src/modules/users/userCache.service';
     forwardRef(() => UserModule),
   ],
   controllers: [PermissionController],
-  providers: [PermissionService, AuthService, UserCacheService],
+  providers: [PermissionService, AuthService],
   exports: [PermissionService],
 })
 export class PermissionModule {}
